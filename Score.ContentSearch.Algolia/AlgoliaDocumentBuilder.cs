@@ -91,7 +91,7 @@ namespace Score.ContentSearch.Algolia
             if (value == null)
                 return;
 
-            AddField(field.Name, value);
+            AddField(field.Name.Replace(" ", "").ToLower(), value);
         }
 
         public override void AddField(string fieldName, object fieldValue, bool append = false)
