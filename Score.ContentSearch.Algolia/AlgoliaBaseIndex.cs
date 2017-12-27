@@ -12,6 +12,8 @@ using Sitecore.ContentSearch.Diagnostics;
 using Sitecore.ContentSearch.Maintenance;
 using Sitecore.ContentSearch.Maintenance.Strategies;
 using Sitecore.ContentSearch.Security;
+using Sitecore.ContentSearch.Events;
+using Sitecore.Abstractions;
 
 #if (SITECORE8)
 using Sitecore.ContentSearch.Sharding;
@@ -192,9 +194,22 @@ namespace Score.ContentSearch.Algolia
 
         public override void Update(IEnumerable<IIndexableUniqueId> indexableUniqueIds, IndexingOptions indexingOptions)
         {
-            using (var context = this.CreateUpdateContext())
+            if (!ShouldStartIndexing(indexingOptions))
+                return;
+            CrawlingLog.Log.Debug($"Algolia: Updating {indexableUniqueIds.Count()} with indexing options {indexingOptions}");
+            var eventInstance = Locator.GetInstance<IEvent>();
+            var eventManagerInstance = Locator.GetInstance<IEventManager>();
+            eventInstance.RaiseEvent("indexing:start", Name, true);
+            var indexingStartingEvent = new IndexingStartedEvent
             {
-                foreach (var crawler in this.Crawlers)
+                IndexName = Name,
+                FullRebuild = false
+            };
+            var event1 = indexingStartingEvent;
+            eventManagerInstance.QueueEvent(event1);
+            using (var context = CreateUpdateContext())
+            {
+                foreach (var crawler in Crawlers)
                 {
                     foreach (var indexableUniqueId in indexableUniqueIds)
                     {
@@ -203,6 +218,15 @@ namespace Score.ContentSearch.Algolia
                 }
                 context.Commit();
             }
+            eventInstance.RaiseEvent("indexing:end", Name, true);
+            var indexingFinishedEvent = new IndexingFinishedEvent
+            {
+                IndexName = Name,
+                FullRebuild = false
+            };
+            var event2 = indexingFinishedEvent;
+            eventManagerInstance.QueueEvent(event2);
+            CrawlingLog.Log.Debug($"Algolia: End Updating {indexableUniqueIds.Count()} with indexing options {indexingOptions}");
         }
 
         public override void Update(IEnumerable<IndexableInfo> indexableInfo)

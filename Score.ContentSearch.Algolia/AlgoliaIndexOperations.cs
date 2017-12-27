@@ -4,9 +4,12 @@ using Score.ContentSearch.Algolia.Abstract;
 using Sitecore.ContentSearch;
 using Sitecore.ContentSearch.Diagnostics;
 using Sitecore.ContentSearch.Linq.Common;
+using Sitecore.ContentSearch.Pipelines.CleanUp;
+using Sitecore.ContentSearch.Pipelines.IndexingFilters;
 using Sitecore.Diagnostics;
 using Sitecore.Events;
 using Sitecore.Reflection;
+using Sitecore.Abstractions;
 
 namespace Score.ContentSearch.Algolia
 {
@@ -83,15 +86,22 @@ namespace Score.ContentSearch.Algolia
 
         private JObject BuildDataToIndex(IProviderUpdateContext context, IIndexable version)
         {
+            var instance = context.Index.Locator.GetInstance<ICorePipeline>();
+            version = CleanUpPipeline.Run(instance, new CleanUpArgs(version, context));
+            if (InboundIndexFilterPipeline.Run(instance, new InboundIndexFilterArgs(version)))
+            {
+                _index.Locator.GetInstance<IEvent>().RaiseEvent("indexing:excludedfromindex", _index.Name, version.UniqueId);
+                return null;
+            }
             //bool flag = InboundIndexFilterPipeline.Run(context.Index.Locator.GetInstance<ICorePipeline>(), new InboundIndexFilterArgs(version));
             //if (flag)
             //{
-                //this.events.RaiseEvent("indexing:excludedfromindex", new object[]
-                //{
-                //    this.index.Name,
-                //    version.UniqueId
-                //});
-                //return null;
+            //this.events.RaiseEvent("indexing:excludedfromindex", new object[]
+            //{
+            //    this.index.Name,
+            //    version.UniqueId
+            //});
+            //return null;
             //}
             var indexData = this.GetIndexData(version, context);
             //if (indexData.IsEmpty)
