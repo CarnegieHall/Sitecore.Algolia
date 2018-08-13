@@ -86,7 +86,7 @@ namespace Score.ContentSearch.Algolia
             chunks.ForEach(chunk => _repository.SaveObjectsAsync(chunk).Wait());
             _updateDocs.Clear();
 
-            var stringsToDelete = _deleteIds.Select(t => t.ToString()).ToList();
+            var stringsToDelete = _deleteIds.Where(t => t != (ID)null).Select(t => t.ToString()).ToList();
 
             foreach (var id in stringsToDelete)
             {
