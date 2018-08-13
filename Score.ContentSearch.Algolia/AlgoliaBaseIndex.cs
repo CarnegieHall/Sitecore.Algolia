@@ -199,6 +199,13 @@ namespace Score.ContentSearch.Algolia
             CrawlingLog.Log.Debug($"Algolia: Updating {indexableUniqueIds.Count()} with indexing options {indexingOptions}");
             var eventInstance = Locator.GetInstance<IEvent>();
             var eventManagerInstance = Locator.GetInstance<IEventManager>();
+
+            /* Sending true here sets a _TIMESTAMP property on this index that is the TIMESTAMP of the last event
+             * it handled. The TIMESTAMP is an incrementing int, not a real timestamp. The indexer compares the values
+             * so it knows what to update.
+             * 
+             * To see this logic check Sitecore.ContentSearch.Maintenance.Strategies the OnIndexingStarted function.
+             */
             eventInstance.RaiseEvent("indexing:start", Name, true);
             var indexingStartingEvent = new IndexingStartedEvent
             {
